@@ -7,6 +7,11 @@
 
 #include <MP.h>
 
+/* CMSIS用 */
+#define ARM_MATH_CM4
+#define __FPU_PRESENT 1U
+#include <cmsis/arm_math.h>
+
 /* 設定用の定数 */
 const int FFT_POINT = 1024;                         //FFT点数
 const int DATA_NUM = 512;                           //一度に送信するデータ数
@@ -23,16 +28,22 @@ void setup() {
   //ADCを行うサブコアを起動
   printf("Start ADC subcore\n");
   MP.begin(ADC_SUBCORE);
+
+  //FFTを行うサブコアを起動
+  printf("Start FFT subcore\n");
+  MP.begin(FFT_SUBCORE);
 }
 
 void loop() {
-  /*
+  
   int8_t msg_id;
-  uint16_t *r_buf;
+  float32_t *r_buf;
   int err;
-  err = MP.Recv(&msg_id, &r_buf, ADC_SUBCORE);
-  for(int i = 0;i < DATA_NUM;++i){
-    printf("%3d : %d\n", i, r_buf[i]);
+  err = MP.Recv(&msg_id, &r_buf, FFT_SUBCORE);
+  for(int i = 0;i < 2*FFT_POINT;i+=2){
+    //printf("%f\n", r_buf[i]);
+    Serial.println(r_buf[i]);
   }
-  */
+  
+  
 }
