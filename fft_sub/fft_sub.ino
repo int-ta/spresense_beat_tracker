@@ -10,6 +10,7 @@
 #define ARM_MATH_CM4
 #define __FPU_PRESENT 1U
 #include <cmsis/arm_math.h>
+#include <cmsis/arm_const_structs.h>
 
 /* 設定用の定数 */
 const int FFT_POINT = 1024;                         //FFT点数
@@ -21,11 +22,12 @@ const int BUF_NUM = 2;                              //バッファの数
 /* グローバル変数 */
 static float32_t buf[BUF_NUM][DATA_NUM];            //受信したデータを保持するバッファ
 static float32_t window[FFT_POINT];                 //窓関数
+const arm_cfft_instance_f32 *instance(0);           //FFT用のinstance
 
 /* 関数 */
 //窓関数をかける関数
 void window_function(const int first_buf,           //先頭のbufferの番号
-                     float32_t *ret);               //出力
+                     float32_t ret);                //出力
 //送られてきたデータからバイアスを引く
 void sub_bias(const int buf_pos,                    //受信したデータを保持しているバッファ
               const float32_t bias);                //バイアスの大きさ
@@ -33,6 +35,9 @@ void sub_bias(const int buf_pos,                    //受信したデータを�
 void setup() {
   //サブコア起動
   MP.begin();
+
+  //instanceに代入
+  instance = &arm_cfft_sR_f32_len1024;
 
   //bufを初期化
   for(int i = 0;i < BUF_NUM;++i){
@@ -55,6 +60,7 @@ void loop() {
   static int8_t msg_id;
   uint16_t *r_buf;
   static int buf_pos = 0;
+  static float32_t fft_source[2*FFT_POINT];           //FFTをかける波形
 
   //データを受け取る
   MP.Recv(&msg_id, &r_buf, ADC_SUBCORE);
@@ -71,11 +77,19 @@ void loop() {
   buf_pos = (buf_pos + 1) % BUF_NUM;
 
   //窓関数をかける
-  window_function(buf_pos, 
+  window_function(buf_pos, fft_source);
+
+  //FFTをかける
+  arm_cfft_f32(instance, fft_source, 0, 1);
+
+  //MainコアにFFT結果を送信
+  MP.Send(msg_id, &fft_source);
   
 }
 
-void window_function(const int first_buf,　float32_t *ret){
+
+
+void window_function(const int first_buf, float32_t *ret){
   //窓関数をかける信号をbufから作成する
   float32_t sig[2*FFT_POINT];
   for(int i = 0;i < FFT_POINT;++i){
