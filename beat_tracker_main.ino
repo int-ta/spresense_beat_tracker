@@ -40,7 +40,7 @@ void loop() {
   float32_t *r_buf;
   int err;
   err = MP.Recv(&msg_id, &r_buf, FFT_SUBCORE);
-  for(int i = 0;i < 2*FFT_POINT;i+=2){
+  for(int i = 0;i < 2*FFT_POINT;i++){
     //printf("%f\n", r_buf[i]);
     Serial.println(r_buf[i]);
   }

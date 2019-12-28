@@ -53,7 +53,7 @@ void setup() {
       window[i] = 0.5 - 0.5*arm_cos_f32(2.0*PI*coe);
     
   }
-  MP.Send(1, &window);
+  //MP.Send(1, &window);
 }
 
 void loop() {
@@ -71,7 +71,7 @@ void loop() {
   }
 
   //受信データからバイアス成分を引く
-  sub_bias(buf_pos, 144);
+  sub_bias(buf_pos, 147);
 
   //次回更新するバッファに変える
   buf_pos = (buf_pos + 1) % BUF_NUM;
@@ -83,7 +83,7 @@ void loop() {
   arm_cfft_f32(instance, fft_source, 0, 1);
 
   //MainコアにFFT結果を送信
-  MP.Send(msg_id, &fft_source);
+  MP.Send(msg_id, fft_source);
   
 }
 

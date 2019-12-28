@@ -33,7 +33,8 @@ void loop() {
   //データがたまったとき
   if(data_pointer == DATA_NUM){
     data_pointer = 0;
-    MP.Send(SEND_ID, buf[buf_pointer], FFT_SUBCORE);
+    MP.Send(SEND_ID, MP.Virt2Phys(buf[buf_pointer]), FFT_SUBCORE);
+    //MP.Send(SEND_ID, MP.Virt2Phys(buf[buf_pointer]));
     buf_pointer = (buf_pointer+1) % BUF_NUM;
   }
 }
