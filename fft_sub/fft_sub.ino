@@ -15,8 +15,10 @@
 /* 設定用の定数 */
 const int FFT_POINT = 1024;                         //FFT点数
 const int DATA_NUM = 512;                           //一度に送信するデータ数
-const unsigned int SAMPLING_INTERVAL = 11600;       //サンプリング間隔[us]
+const unsigned int SAMPLING_INTERVAL = 23;          //サンプリング間隔[us]
 const int ADC_SUBCORE = 1;                          //ADCを行うサブコア番号
+const int FFT_SUBCORE = 2;                          //FFTを行うサブコア番号
+const int DF_SUBCORE = 3;                           //DFを求めるサブコア番号
 const int BUF_NUM = 2;                              //バッファの数
 
 /* グローバル変数 */
@@ -71,7 +73,7 @@ void loop() {
   }
 
   //受信データからバイアス成分を引く
-  sub_bias(buf_pos, 147);
+  sub_bias(buf_pos, 345);
 
   //次回更新するバッファに変える
   buf_pos = (buf_pos + 1) % BUF_NUM;
@@ -83,7 +85,7 @@ void loop() {
   arm_cfft_f32(instance, fft_source, 0, 1);
 
   //MainコアにFFT結果を送信
-  MP.Send(msg_id, fft_source);
+  //MP.Send(msg_id, fft_source);
   
 }
 
