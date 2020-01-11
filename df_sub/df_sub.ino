@@ -29,7 +29,8 @@ void setup() {
 void loop() {
   static float32_t spe_buf[BUF_SIZE][2*FFT_POINT];  //スペクトル(複素数)
   static float32_t amp_buf[BUF_SIZE][FFT_POINT];    //振幅(実数)
-  static float32_t pha_buf[BUF_SIZE][FFT_POINT];    //位相(実数)
+  static float32_t cos_buf[BUF_SIZE][FFT_POINT];    //位相(実部)
+  static float32_t sin_buf[BUF_SIZE][FFT_POINT];    //位相(虚部)
   static int pointer = 3;                           //先頭を指す
   static float32_t *r_buf;                          //受信したデータ      
   static int8_t msg_id;
@@ -41,9 +42,20 @@ void loop() {
   //受信したデータから値渡し
   arm_copy_f32(r_buf, spe_buf[pointer], 2*FFT_POINT);
 
+  //振幅を取り出す
   arm_cmplx_mag_f32(spe_buf[pointer], amp_buf[pointer], FFT_POINT);
 
-  
+  //位相を取り出す
+  for(int i = 0;i < 2*FFT_POINT;++i){
+    //実部
+    if(i%2 == 0){
+      cos_buf[pointer][i/2] = spe_buf[pointer][i] / amp_buf[pointer][i/2];
+    }
+    //虚部
+    else{
+      sin_buf[pointer][i/2] = spe_buf[pointer][i] / amp_buf[pointer][i/2];
+    }
+  }
 }
 
 int emod(int a, int b){
