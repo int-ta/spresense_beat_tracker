@@ -28,11 +28,13 @@ void setup() {
 
 void loop() {
   static float32_t spe_buf[BUF_SIZE][2*FFT_POINT];  //スペクトル(複素数)
+  static float32_t pred_spe[2*FFT_POINT];           //予想スペクトル(複素数)
   static float32_t amp_buf[BUF_SIZE][FFT_POINT];    //振幅(実数)
   static float32_t cos_buf[BUF_SIZE][FFT_POINT];    //位相(実部)
   static float32_t sin_buf[BUF_SIZE][FFT_POINT];    //位相(虚部)
   static int pointer = 3;                           //先頭を指す
-  static float32_t *r_buf;                          //受信したデータ      
+  static float32_t *r_buf;                          //受信したデータ
+  static float32_t df[BUF_SIZE];   
   static int8_t msg_id;
 
   //FFT_SUBCOREからスペクトルを受信
@@ -47,15 +49,37 @@ void loop() {
 
   //位相を取り出す
   for(int i = 0;i < 2*FFT_POINT;++i){
-    //実部
-    if(i%2 == 0){
+    if(i%2 == 0){   //実部
       cos_buf[pointer][i/2] = spe_buf[pointer][i] / amp_buf[pointer][i/2];
-    }
-    //虚部
-    else{
+    }else{          //虚部
       sin_buf[pointer][i/2] = spe_buf[pointer][i] / amp_buf[pointer][i/2];
     }
   }
+
+  //予想スペクトルを求める
+  for(int i = 0;i < 2*FFT_POINT;++i){
+    int m_1 = emod(pointer-1, BUF_SIZE);
+    int m_2 = emod(pointer-2, BUF_SIZE);
+    int k = i/2;
+    
+    if(i%2 == 0){   //実部
+      pred_spe[i] = amp_buf[m_1][k] * ( (1.0 - 2.0*sin_buf[m_1][k]*sin_buf[m_1][k])*cos_buf[m_2][k] + 2.0*sin_buf[m_1][k]*cos_buf[m_1][k]*sin_buf[m_2][k] );
+    }else{          //虚部
+      pred_spe[i] = amp_buf[m_1][k] * ( 2.0*sin_buf[m_1][k]*cos_buf[m_1][k]*cos_buf[m_2][k] + (1.0 - 2.0*sin_buf[m_1][k]*sin_buf[m_1][k])*sin_buf[m_2][k] );
+    }
+  }
+
+  //DFを求める
+  df[pointer] = 0.0;
+  float32_t spe_sub[2*FFT_POINT];
+  arm_sub_f32(spe_buf[pointer], pred_spe, spe_sub, 2*FFT_POINT);
+  float32_t spe_sub_norm[FFT_POINT];
+  arm_cmplx_mag_squared_f32(spe_sub, spe_sub_norm, FFT_POINT);
+  for(int i = 0;i < FFT_POINT;++i){
+    df[pointer] += spe_sub_norm[i];
+  }
+
+  pointer = emod(pointer+1, BUF_SIZE);
 }
 
 int emod(int a, int b){
