@@ -11,7 +11,7 @@
 const int FFT_POINT = 1024;                         //FFT点数
 const int DATA_NUM = 512;                           //一度に送信するデータ数
 const int BUF_NUM = 2;                              //バッファのサイズ
-const unsigned int SAMPLING_INTERVAL = 11300;          //サンプリング間隔[us]
+const unsigned int SAMPLING_INTERVAL = 23;          //サンプリング間隔[us]
 const int8_t SEND_ID = 2;                           //送信ID
 const uint8_t ADC_PIN = A5;                         //ADCを行うピン番号
 const int ADC_SUBCORE = 1;                          //ADCを行うサブコア番号

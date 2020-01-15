@@ -42,18 +42,14 @@ void loop() {
   //FFT_SUBCOREからスペクトルを受信
   MP.Recv(&msg_id, &r_buf, FFT_SUBCORE);
   pointer = emod(pointer + 1, BUF_SIZE);
-  //MPLog("Recieve data\n");
 
   //受信したデータから値渡し
-  //arm_copy_f32(r_buf, spe_buf[pointer], 2*FFT_POINT);
   for(int i = 0;i < 2*FFT_POINT;++i){
     spe_buf[pointer][i] = r_buf[i];
   }
-  //MPLog("copy data\n");
 
   //振幅を取り出す
   arm_cmplx_mag_f32(spe_buf[pointer], amp_buf[pointer], FFT_POINT);
-  //MPLog("culc amp\n");
 
   //位相を取り出す
   for(int i = 0;i < 2*FFT_POINT;++i){
@@ -66,15 +62,18 @@ void loop() {
   //MPLog("culc phase\n");
 
   //予想スペクトルを求める
+  int m_1 = emod(pointer-1, BUF_SIZE);
+  int m_2 = emod(pointer-2, BUF_SIZE);
   for(int i = 0;i < 2*FFT_POINT;++i){
-    int m_1 = emod(pointer-1, BUF_SIZE);
-    int m_2 = emod(pointer-2, BUF_SIZE);
     int k = i/2;
+
+    float32_t cos_2phi_m1 = 1.0 - 2.0*sin_buf[m_1][k]*sin_buf[m_1][k];
+    float32_t sin_2phi_m1 = 2.0*sin_buf[m_1][k]*cos_buf[m_1][k];
     
     if(i%2 == 0){   //実部
-      pred_spe[i] = amp_buf[m_1][k] * ( (1.0 - 2.0*sin_buf[m_1][k]*sin_buf[m_1][k])*cos_buf[m_2][k] + 2.0*sin_buf[m_1][k]*cos_buf[m_1][k]*sin_buf[m_2][k] );
+      pred_spe[i] = amp_buf[m_1][k] * ( cos_2phi_m1*cos_buf[m_2][k] + sin_2phi_m1*sin_buf[m_2][k] );
     }else{          //虚部
-      pred_spe[i] = amp_buf[m_1][k] * ( 2.0*sin_buf[m_1][k]*cos_buf[m_1][k]*cos_buf[m_2][k] + (1.0 - 2.0*sin_buf[m_1][k]*sin_buf[m_1][k])*sin_buf[m_2][k] );
+      pred_spe[i] = amp_buf[m_1][k] * ( sin_2phi_m1*cos_buf[m_2][k] + cos_2phi_m1*sin_buf[m_2][k] );
     }
   }
   //MPLog("culc pred_spe\n");
@@ -91,9 +90,8 @@ void loop() {
   //MPLog("culc DF\n");
 
   MPLog("%d, %lf\n", pointer, (float)df[pointer]);
-  MP.Send(1, amp_buf[pointer]);
+  //MP.Send(1, amp_buf[pointer]);
 
-  pointer = emod(pointer+1, BUF_SIZE);
 }
 
 int emod(int a, int b){
