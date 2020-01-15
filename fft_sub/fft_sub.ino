@@ -37,6 +37,9 @@ void sub_bias(const int buf_pos,                    //受信したデータを�
 void setup() {
   //サブコア起動
   MP.begin();
+  MPLog("start FFT subcore\n");
+
+  MP.RecvTimeout(MP_RECV_BLOCKING);
 
   //instanceに代入
   instance = &arm_cfft_sR_f32_len1024;
@@ -62,10 +65,12 @@ void loop() {
   static int8_t msg_id;
   uint16_t *r_buf;
   static int buf_pos = 0;
-  static float32_t fft_source[2*FFT_POINT];           //FFTをかける波形
+  static float32_t fft_source[BUF_NUM][2*FFT_POINT];           //FFTをかける波形
+  static int fft_buf_pos = 0;
 
   //データを受け取る
   MP.Recv(&msg_id, &r_buf, ADC_SUBCORE);
+  //MPLog("Recieve sound data\n");
 
   //受け取ったデータを移し替える
   for(int i = 0;i < DATA_NUM;++i){
@@ -75,17 +80,23 @@ void loop() {
   //受信データからバイアス成分を引く
   sub_bias(buf_pos, 345);
 
+  for(int i = 0;i < DATA_NUM;++i){
+    buf[buf_pos][i] = buf[buf_pos][i] * 0.1;
+  }
+
   //次回更新するバッファに変える
   buf_pos = (buf_pos + 1) % BUF_NUM;
 
   //窓関数をかける
-  window_function(buf_pos, fft_source);
+  window_function(buf_pos, fft_source[fft_buf_pos]);
 
   //FFTをかける
-  arm_cfft_f32(instance, fft_source, 0, 1);
+  arm_cfft_f32(instance, fft_source[fft_buf_pos], 0, 1);
 
-  //MainコアにFFT結果を送信
-  //MP.Send(msg_id, fft_source);
+  //DFサブコアにFFT結果を送信
+  MP.Send(msg_id, fft_source[fft_buf_pos], DF_SUBCORE);
+
+  fft_buf_pos = (fft_buf_pos + 1) % BUF_NUM;
   
 }
 

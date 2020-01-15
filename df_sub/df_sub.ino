@@ -20,10 +20,12 @@ const int FFT_POINT = 1024;                         //FFT点数
 const int BUF_SIZE = 3;                             //spe_buf,amp_buf,pha_bufのサイズ
 
 /* 関数 */
-int emod(int a, int b);                             //bを法とするオイラー除法で行う
+int emod(int a, int b);                             //bを法とするユークリッド除法で行う
 
 void setup() {
-  MP.begin();  
+  MP.begin(); 
+  MP.RecvTimeout(MP_RECV_BLOCKING);
+  MPLog("Start DF subcore\n"); 
 }
 
 void loop() {
@@ -40,12 +42,18 @@ void loop() {
   //FFT_SUBCOREからスペクトルを受信
   MP.Recv(&msg_id, &r_buf, FFT_SUBCORE);
   pointer = emod(pointer + 1, BUF_SIZE);
+  //MPLog("Recieve data\n");
 
   //受信したデータから値渡し
-  arm_copy_f32(r_buf, spe_buf[pointer], 2*FFT_POINT);
+  //arm_copy_f32(r_buf, spe_buf[pointer], 2*FFT_POINT);
+  for(int i = 0;i < 2*FFT_POINT;++i){
+    spe_buf[pointer][i] = r_buf[i];
+  }
+  //MPLog("copy data\n");
 
   //振幅を取り出す
   arm_cmplx_mag_f32(spe_buf[pointer], amp_buf[pointer], FFT_POINT);
+  //MPLog("culc amp\n");
 
   //位相を取り出す
   for(int i = 0;i < 2*FFT_POINT;++i){
@@ -55,6 +63,7 @@ void loop() {
       sin_buf[pointer][i/2] = spe_buf[pointer][i] / amp_buf[pointer][i/2];
     }
   }
+  //MPLog("culc phase\n");
 
   //予想スペクトルを求める
   for(int i = 0;i < 2*FFT_POINT;++i){
@@ -68,16 +77,21 @@ void loop() {
       pred_spe[i] = amp_buf[m_1][k] * ( 2.0*sin_buf[m_1][k]*cos_buf[m_1][k]*cos_buf[m_2][k] + (1.0 - 2.0*sin_buf[m_1][k]*sin_buf[m_1][k])*sin_buf[m_2][k] );
     }
   }
+  //MPLog("culc pred_spe\n");
 
   //DFを求める
   df[pointer] = 0.0;
-  float32_t spe_sub[2*FFT_POINT];
+  static float32_t spe_sub[2*FFT_POINT];
   arm_sub_f32(spe_buf[pointer], pred_spe, spe_sub, 2*FFT_POINT);
-  float32_t spe_sub_norm[FFT_POINT];
+  static float32_t spe_sub_norm[FFT_POINT];
   arm_cmplx_mag_squared_f32(spe_sub, spe_sub_norm, FFT_POINT);
   for(int i = 0;i < FFT_POINT;++i){
     df[pointer] += spe_sub_norm[i];
   }
+  //MPLog("culc DF\n");
+
+  MPLog("%d, %lf\n", pointer, (float)df[pointer]);
+  MP.Send(1, amp_buf[pointer]);
 
   pointer = emod(pointer+1, BUF_SIZE);
 }
@@ -86,6 +100,6 @@ int emod(int a, int b){
   if(a > -1){
     return a%b;
   }else{
-    return a - floor(a/b) * b;
+    return (a - (ceil(a/b)-1) * b);
   }
 }

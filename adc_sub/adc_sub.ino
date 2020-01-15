@@ -11,7 +11,7 @@
 const int FFT_POINT = 1024;                         //FFT点数
 const int DATA_NUM = 512;                           //一度に送信するデータ数
 const int BUF_NUM = 2;                              //バッファのサイズ
-const unsigned int SAMPLING_INTERVAL = 23;          //サンプリング間隔[us]
+const unsigned int SAMPLING_INTERVAL = 11300;          //サンプリング間隔[us]
 const int8_t SEND_ID = 2;                           //送信ID
 const uint8_t ADC_PIN = A5;                         //ADCを行うピン番号
 const int ADC_SUBCORE = 1;                          //ADCを行うサブコア番号
@@ -30,6 +30,8 @@ unsigned int get_adc(void);                         //ADCの値を読んで書�
 void setup() {
   //サブコア起動
   MP.begin();
+  MPLog("start ADC subcore\n");
+  MP.RecvTimeout(MP_RECV_BLOCKING);
   SPI.begin();
   SPI.beginTransaction(SPISettings(3000000, MSBFIRST, SPI_MODE0));
   attachTimerInterrupt(get_adc, SAMPLING_INTERVAL);
@@ -42,6 +44,7 @@ void loop() {
     old_buf_pointer = buf_pointer;
     buf_pointer = (buf_pointer+1) % BUF_NUM;
     MP.Send(SEND_ID, buf[old_buf_pointer], FFT_SUBCORE);
+    //MPLog("send data\n");
     //MP.Send(SEND_ID, buf[old_buf_pointer]);
   }
 }

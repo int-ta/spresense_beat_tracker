@@ -42,14 +42,17 @@ void setup() {
 void loop() {
   
   static int8_t msg_id;
-  float32_t *r_buf;
+  //float32_t *r_buf;
   //uint16_t *r_buf;
-  MP.Recv(&msg_id, &r_buf, FFT_SUBCORE);
+  //MP.Recv(&msg_id, &r_buf, FFT_SUBCORE);
   //MP.Recv(&msg_id, &r_buf, ADC_SUBCORE);
   //Serial.println(r_buf[0]);
   //for(int i = 0;i < 2*FFT_POINT;i++){
     //printf("%f\n", r_buf[i]);
     //Serial.println(r_buf[i]);
   //}
-  
+
+  float32_t *r;
+  MP.Recv(&msg_id, &r, DF_SUBCORE);
+  Serial.println(r[0]);
 }
