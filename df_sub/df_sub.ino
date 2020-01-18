@@ -16,6 +16,8 @@
 const int ADC_SUBCORE = 1;                          //ADCを行うサブコア番号
 const int FFT_SUBCORE = 2;                          //FFTを行うサブコア番号
 const int DF_SUBCORE = 3;                           //DFを求めるサブコア番号
+const int TE_SUBCORE  = 4;
+const int BT_SUBCORE  = 5;
 const int FFT_POINT = 1024;                         //FFT点数
 const int BUF_SIZE = 3;                             //spe_buf,amp_buf,pha_bufのサイズ
 
@@ -91,6 +93,9 @@ void loop() {
 
   MPLog("%d, %lf\n", pointer, (float)df[pointer]);
   //MP.Send(1, amp_buf[pointer]);
+  MP.Send(1, &df[pointer], BT_SUBCORE);
+  //MPLog("%p\n", &df[pointer]);
+  //MPLog("%p\n", MP.Virt2Phys(&df[pointer]));
 
 }
 
