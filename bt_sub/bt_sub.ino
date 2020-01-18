@@ -49,16 +49,18 @@ void setup(){
 }
 
 void loop(){
-  static float32_t df;
+  float32_t *df;
   static float32_t new_inf;
-  static int msg_id;
+  static int8_t msg_id;
   static float32_t cumu_score[231] = {};
   static int cs_head = 0;
   static int old_beat_pos = 200;
   static int next_beat_pos;
 
-  MP.Recv(msg_id, &df, DF_SUBCORE);
-  new_inf = (1.0-alpha) * df;
+  MP.Recv(&msg_id, &df, DF_SUBCORE);
+  new_inf = (1.0-alpha) * (*df);
+  MPLog("%lf\n", *df);
+  //MPLog("%p\n", MP.Virt2Phys(df));
 
   for(int v1 = 58;v1 < 231;++v1){
     cumu_score[cs_head] = max(cumu_score[cs_head], 
@@ -76,7 +78,7 @@ void loop(){
   
   next_beat_pos = old_beat_pos + arg_max_v2;
 
-  MP.Send((int8_t)cs_head, &next_beat_pos);
+  //MP.Send((int8_t)cs_head, &next_beat_pos);
   cs_head = (cs_head + 1) % MAX_V1;
 
 }
