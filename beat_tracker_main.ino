@@ -20,6 +20,8 @@ const unsigned int SAMPLING_INTERVAL = 23;          //サンプリング間隔[u
 const int ADC_SUBCORE = 1;                          //ADCを行うサブコア番号
 const int FFT_SUBCORE = 2;                          //FFTを行うサブコア番号
 const int DF_SUBCORE = 3;                           //DFを求めるサブコア番号
+const int TE_SUBCORE  = 4;
+const int BT_SUBCORE  = 5;
 
 void setup() {
   Serial.begin(115200);
@@ -37,6 +39,10 @@ void setup() {
   //DFを求めるサブコアを起動
   printf("Start DF subcore\n");
   MP.begin(DF_SUBCORE);
+
+  //BTを行うサブコアを起動
+  printf("Start BT subcore\n");
+  MP.begin(BT_SUBCORE);
 }
 
 void loop() {
