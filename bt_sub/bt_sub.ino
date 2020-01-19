@@ -87,6 +87,6 @@ int emod(int a, int b){
   if(a > -1){
     return a%b;
   }else{
-    return (a - (ceil(a/b)-1) * b);
+    return (a - floor((float)a/(float)b) * b);
   }
 }

@@ -91,7 +91,10 @@ void loop() {
   }
   //MPLog("culc DF\n");
 
-  MPLog("%d, %lf\n", pointer, (float)df[pointer]);
+  static int hoge = 0;
+  hoge--;
+  MPLog("%d %d\n", hoge, emod(hoge, BUF_SIZE));
+  //MPLog("%d, %lf\n", pointer, (float)df[pointer]);
   //MP.Send(1, amp_buf[pointer]);
   MP.Send(1, &df[pointer], BT_SUBCORE);
   //MPLog("%p\n", &df[pointer]);
@@ -103,6 +106,6 @@ int emod(int a, int b){
   if(a > -1){
     return a%b;
   }else{
-    return (a - (ceil(a/b)-1) * b);
+    return (a - floor((float)a/(float)b) * b);
   }
 }
