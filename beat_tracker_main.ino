@@ -23,6 +23,10 @@ const int DF_SUBCORE = 3;                           //DFを求めるサブコア
 const int TE_SUBCORE  = 4;
 const int BT_SUBCORE  = 5;
 
+/* 関数 */
+unsigned int hoge(void);
+int emod(int a, int b);
+
 void setup() {
   Serial.begin(115200);
   while(!Serial);
@@ -43,22 +47,23 @@ void setup() {
   //BTを行うサブコアを起動
   printf("Start BT subcore\n");
   MP.begin(BT_SUBCORE);
+
 }
 
 void loop() {
-  
   static int8_t msg_id;
-  //float32_t *r_buf;
-  //uint16_t *r_buf;
-  //MP.Recv(&msg_id, &r_buf, FFT_SUBCORE);
-  //MP.Recv(&msg_id, &r_buf, ADC_SUBCORE);
-  //Serial.println(r_buf[0]);
-  //for(int i = 0;i < 2*FFT_POINT;i++){
-    //printf("%f\n", r_buf[i]);
-    //Serial.println(r_buf[i]);
-  //}
+  static int32_t *r_buf;
+  
+  MP.Recv(&msg_id, &r_buf, BT_SUBCORE);
+  
 
-  float32_t *r;
-  MP.Recv(&msg_id, &r, DF_SUBCORE);
-  Serial.println(r[0]);
+  //MPLog("%d %d\n", now_pos, next_pos);  
+}
+
+int emod(int a, int b){
+  if(a > -1){
+    return a%b;
+  }else{
+    return (a - floor((float)a/(float)b) * b);
+  }
 }

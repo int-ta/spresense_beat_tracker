@@ -28,6 +28,7 @@ static float32_t W_1[231];                  //対数ガウシアン遷移重み
 static float32_t W_2[116];                  //ガウシアン重み
 static const float32_t alpha = 0.9;         //新旧情報へのウェイト
 static const float32_t eta = 5.0;           //W_1のタイトさ
+static float32_t cumu_score[231] = {};
 
 /* 関数 */
 int emod(int a, int b);                     //ユークリッド除法でa%bを求める
@@ -37,8 +38,9 @@ void setup(){
   MPLog("start DT subcore\n");
 
   //W_1を設定する
-  for(int v1 = 1;v1 < 231;++v1){               //v=0は未定義なので1<=v<=230で代入する
-    W_1[v1] = exp(- pow(eta * log10(-(float32_t)v1/(float32_t)beat_period),2.0) * 0.5);
+  for(int v1 = 1;v1 < 231;++v1){               //v1=0は未定義なので1<=v1<=230で代入する
+    W_1[v1] = (float32_t)exp(- pow(eta * log10((float)v1/(float)beat_period), 2.0) * 0.5);
+    cumu_score[v1] = 0.0;
   }
 
   //W_2を設定する
@@ -46,29 +48,34 @@ void setup(){
     W_2[v2] = exp( - pow((float32_t)v2 - (float32_t)beat_period / 2.0, 2.0) 
                   / (2.0*pow((float32_t)beat_period/2.0, 2.0)));
   }
+
+  pinMode(LED0, OUTPUT);
 }
 
 void loop(){
   float32_t *df;
   static float32_t new_inf;
   static int8_t msg_id;
-  static float32_t cumu_score[231] = {};
-  static int cs_head = 0;
-  static int old_beat_pos = 200;
-  static int next_beat_pos;
+  static int32_t cs_head = 0;
+  static int32_t old_beat_pos = 200;
+  static int32_t next_beat_pos;
+  static int led_state = 0;
 
   MP.Recv(&msg_id, &df, DF_SUBCORE);
   new_inf = (1.0-alpha) * (*df);
-  MPLog("%lf\n", *df);
+  //MPLog("%lf\n", *df);
   //MPLog("%p\n", MP.Virt2Phys(df));
 
+  static float32_t candidate;
   for(int v1 = 58;v1 < 231;++v1){
-    cumu_score[cs_head] = max(cumu_score[cs_head], 
-                              new_inf + alpha*W_1[v1]*cumu_score[emod(cs_head-v1, MAX_V1)]);
+    candidate = new_inf + alpha*W_1[v1]*cumu_score[emod(cs_head-v1, MAX_V1)];
+    if(candidate > cumu_score[cs_head]){
+      cumu_score[cs_head] = candidate;
+    }
   }
 
   int arg_max_v2;
-  int weight_cs_max = 0;
+  float32_t weight_cs_max = 0;
   for(int v2 = 1;v2 <= beat_period; ++v2){
     if(weight_cs_max < W_2[v2] * cumu_score[emod(old_beat_pos+v2, MAX_V1)]){
       weight_cs_max = W_2[v2] * cumu_score[emod(old_beat_pos+v2, MAX_V1)];
@@ -76,8 +83,16 @@ void loop(){
     }
   }
   
-  next_beat_pos = old_beat_pos + arg_max_v2;
+  next_beat_pos = emod(old_beat_pos + arg_max_v2, MAX_V1);
+  //越した判定(暫定的なもの，あとでしっかり考え直す必要あり)
+  if(next_beat_pos == cs_head){
+    old_beat_pos = next_beat_pos;
+    //MP.Send(1, &old_beat_pos);
+    led_state ^= 1;
+    digitalWrite(LED0, led_state);
+  }
 
+  MPLog("%d %d\n", cs_head, next_beat_pos);
   //MP.Send((int8_t)cs_head, &next_beat_pos);
   cs_head = (cs_head + 1) % MAX_V1;
 

@@ -91,9 +91,6 @@ void loop() {
   }
   //MPLog("culc DF\n");
 
-  static int hoge = 0;
-  hoge--;
-  MPLog("%d %d\n", hoge, emod(hoge, BUF_SIZE));
   //MPLog("%d, %lf\n", pointer, (float)df[pointer]);
   //MP.Send(1, amp_buf[pointer]);
   MP.Send(1, &df[pointer], BT_SUBCORE);
