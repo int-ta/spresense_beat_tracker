@@ -15,11 +15,12 @@
 /* 設定用の定数 */
 const int ADC_SUBCORE = 1;                          //ADCを行うサブコア番号
 const int FFT_SUBCORE = 2;                          //FFTを行うサブコア番号
-const int DF_SUBCORE = 3;                           //DFを求めるサブコア番号
-const int TE_SUBCORE  = 4;
-const int BT_SUBCORE  = 5;
+const int DF_SUBCORE = 3;                           //Detection Functionを求めるサブコア番号
+const int TE_SUBCORE  = 4;                          //Tempo Estimationを行うサブコア番号
+const int BT_SUBCORE  = 5;                          //Beat Trackingを行うサブコア番号
 const int FFT_POINT = 1024;                         //FFT点数
 const int BUF_SIZE = 3;                             //spe_buf,amp_buf,pha_bufのサイズ
+const int HOP_SIZE = 128;                           //TEに一度に送るDFのサンプル数
 
 /* 関数 */
 int emod(int a, int b);                             //bを法とするユークリッド除法で行う
@@ -36,36 +37,38 @@ void loop() {
   static float32_t amp_buf[BUF_SIZE][FFT_POINT];    //振幅(実数)
   static float32_t cos_buf[BUF_SIZE][FFT_POINT];    //位相(実部)
   static float32_t sin_buf[BUF_SIZE][FFT_POINT];    //位相(虚部)
-  static int pointer = 3;                           //先頭を指す
+  static int df_bt_pointer = 3;                           //dfの先頭を指す
+  static int df_te_pointer = 0;                     //df_teの保存先
+  static int df_te_i = 0;                           //df_teのイテレータ
   static float32_t *r_buf;                          //受信したデータ
-  static float32_t df[BUF_SIZE];   
+  static float32_t df_bt[BUF_SIZE];                 //BT subcoreに送るためのDF
+  static float32_t df_te[BUF_SIZE][HOP_SIZE];       //TE subcoreに送るためのDF
   static int8_t msg_id;
 
   //FFT_SUBCOREからスペクトルを受信
   MP.Recv(&msg_id, &r_buf, FFT_SUBCORE);
-  pointer = emod(pointer + 1, BUF_SIZE);
+  df_bt_pointer = emod(df_bt_pointer + 1, BUF_SIZE);
 
   //受信したデータから値渡し
   for(int i = 0;i < 2*FFT_POINT;++i){
-    spe_buf[pointer][i] = r_buf[i];
+    spe_buf[df_bt_pointer][i] = r_buf[i];
   }
 
   //振幅を取り出す
-  arm_cmplx_mag_f32(spe_buf[pointer], amp_buf[pointer], FFT_POINT);
+  arm_cmplx_mag_f32(spe_buf[df_bt_pointer], amp_buf[df_bt_pointer], FFT_POINT);
 
   //位相を取り出す
   for(int i = 0;i < 2*FFT_POINT;++i){
     if(i%2 == 0){   //実部
-      cos_buf[pointer][i/2] = spe_buf[pointer][i] / amp_buf[pointer][i/2];
+      cos_buf[df_bt_pointer][i/2] = spe_buf[df_bt_pointer][i] / amp_buf[df_bt_pointer][i/2];
     }else{          //虚部
-      sin_buf[pointer][i/2] = spe_buf[pointer][i] / amp_buf[pointer][i/2];
+      sin_buf[df_bt_pointer][i/2] = spe_buf[df_bt_pointer][i] / amp_buf[df_bt_pointer][i/2];
     }
   }
-  //MPLog("culc phase\n");
 
   //予想スペクトルを求める
-  int m_1 = emod(pointer-1, BUF_SIZE);
-  int m_2 = emod(pointer-2, BUF_SIZE);
+  int m_1 = emod(df_bt_pointer-1, BUF_SIZE);
+  int m_2 = emod(df_bt_pointer-2, BUF_SIZE);
   for(int i = 0;i < 2*FFT_POINT;++i){
     int k = i/2;
 
@@ -78,24 +81,25 @@ void loop() {
       pred_spe[i] = amp_buf[m_1][k] * ( sin_2phi_m1*cos_buf[m_2][k] + cos_2phi_m1*sin_buf[m_2][k] );
     }
   }
-  //MPLog("culc pred_spe\n");
 
   //DFを求める
-  df[pointer] = 0.0;
+  df_bt[df_bt_pointer] = 0.0;
   static float32_t spe_sub[2*FFT_POINT];
-  arm_sub_f32(spe_buf[pointer], pred_spe, spe_sub, 2*FFT_POINT);
+  arm_sub_f32(spe_buf[df_bt_pointer], pred_spe, spe_sub, 2*FFT_POINT);
   static float32_t spe_sub_norm[FFT_POINT];
   arm_cmplx_mag_squared_f32(spe_sub, spe_sub_norm, FFT_POINT);
   for(int i = 0;i < FFT_POINT;++i){
-    df[pointer] += spe_sub_norm[i];
+    df_bt[df_bt_pointer] += spe_sub_norm[i];
   }
-  //MPLog("culc DF\n");
 
-  //MPLog("%d, %lf\n", pointer, (float)df[pointer]);
-  //MP.Send(1, amp_buf[pointer]);
-  MP.Send(1, &df[pointer], BT_SUBCORE);
-  //MPLog("%p\n", &df[pointer]);
-  //MPLog("%p\n", MP.Virt2Phys(&df[pointer]));
+  df_te[df_te_pointer][df_te_i++] = df_bt[df_bt_pointer];
+  if(df_te_i == HOP_SIZE){
+    df_te_i = 0;
+    MP.Send(1, &df_te[df_te_pointer], TE_SUBCORE);
+    df_te_pointer = emod(df_te_pointer+1, BUF_SIZE);
+  } 
+  
+  MP.Send(1, &df_bt[df_bt_pointer], BT_SUBCORE);
 
 }
 
