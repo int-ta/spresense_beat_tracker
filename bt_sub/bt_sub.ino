@@ -13,8 +13,8 @@ const int FFT_SUBCORE = 2;
 const int DF_SUBCORE  = 3;
 const int TE_SUBCORE  = 4;
 const int BT_SUBCORE  = 5;
-const int MAX_V1      = 231;
-const int MAX_V2      = 116;
+const int MAX_V1      = 131;
+const int MAX_V2      = 66;
 
 /* CMSIS用 */
 #define ARM_MATH_CM4
@@ -23,12 +23,12 @@ const int MAX_V2      = 116;
 #include <cmsis/arm_const_structs.h>
 
 /* グローバル変数 */
-static int beat_period = 115;               //ビート間隔[DF sample]
-static float32_t W_1[231];                  //対数ガウシアン遷移重み
-static float32_t W_2[116];                  //ガウシアン重み
+static int beat_period = 65;                //ビート間隔[DF sample]
+static float32_t W_1[131];                  //対数ガウシアン遷移重み
+static float32_t W_2[66];                  //ガウシアン重み
 static const float32_t alpha = 0.9;         //新旧情報へのウェイト
 static const float32_t eta = 5.0;           //W_1のタイトさ
-static float32_t cumu_score[231] = {};
+static float32_t cumu_score[131] = {};
 
 /* 関数 */
 int emod(int a, int b);                     //ユークリッド除法でa%bを求める
@@ -38,13 +38,13 @@ void setup(){
   MPLog("start DT subcore\n");
 
   //W_1を設定する
-  for(int v1 = 1;v1 < 231;++v1){               //v1=0は未定義なので1<=v1<=230で代入する
+  for(int v1 = 1;v1 < 131;++v1){               //v1=0は未定義なので1<=v1<=230で代入する
     W_1[v1] = (float32_t)exp(- pow(eta * log10((float)v1/(float)beat_period), 2.0) * 0.5);
     cumu_score[v1] = 0.0;
   }
 
   //W_2を設定する
-  for(int v2 = 1;v2 < 116;++v2){
+  for(int v2 = 1;v2 < 66;++v2){
     W_2[v2] = exp( - pow((float32_t)v2 - (float32_t)beat_period / 2.0, 2.0) 
                   / (2.0*pow((float32_t)beat_period/2.0, 2.0)));
   }
