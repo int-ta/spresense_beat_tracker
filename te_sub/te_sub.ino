@@ -36,6 +36,10 @@ float32_t hwr(float32_t x);
 void setup(){
   MP.begin();
   MPLog("start TE subcore\n");
+  int usedMem, freeMem, largestFreeMem;
+  MP.GetMemoryInfo(usedMem, freeMem, largestFreeMem);
+  MPLog("Used:%4d [KB] / Free:%4d [KB] (Largest:%4d [KB])\n",
+        usedMem / 1024, freeMem / 1024, largestFreeMem / 1024);
   
   /*
   //float32_t tmp;

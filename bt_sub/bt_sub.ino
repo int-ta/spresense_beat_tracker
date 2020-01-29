@@ -35,7 +35,11 @@ int emod(int a, int b);                     //ユークリッド除法でa%bを�
 
 void setup(){
   MP.begin();
-  MPLog("start DT subcore\n");
+  MPLog("start BT subcore\n");
+  int usedMem, freeMem, largestFreeMem;
+  MP.GetMemoryInfo(usedMem, freeMem, largestFreeMem);
+  MPLog("Used:%4d [KB] / Free:%4d [KB] (Largest:%4d [KB])\n",
+        usedMem / 1024, freeMem / 1024, largestFreeMem / 1024);
 
   //W_1を設定する
   for(int v1 = 1;v1 < 131;++v1){               //v1=0は未定義なので1<=v1<=230で代入する
