@@ -48,7 +48,7 @@ void loop() {
     data_pointer = 0;
     old_buf_pointer = buf_pointer;
     buf_pointer = (buf_pointer+1) % BUF_NUM;
-    MP.Send(SEND_ID, buf[old_buf_pointer], FFT_SUBCORE);
+    MP.Send(SEND_ID, buf[old_buf_pointer], DF_SUBCORE);
     //MPLog("send data\n");
     //MP.Send(SEND_ID, buf[old_buf_pointer]);
   }
