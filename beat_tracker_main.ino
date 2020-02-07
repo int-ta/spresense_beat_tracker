@@ -31,8 +31,8 @@ void setup() {
   MP.begin(ADC_SUBCORE);
 
   //FFTを行うサブコアを起動
-  printf("Start FFT subcore\n");
-  MP.begin(FFT_SUBCORE);
+  //printf("Start FFT subcore\n");
+  //MP.begin(FFT_SUBCORE);
 
   //DFを求めるサブコアを起動
   printf("Start DF subcore\n");
