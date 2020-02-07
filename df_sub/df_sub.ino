@@ -19,8 +19,15 @@ const int DF_SUBCORE = 3;                           //Detection Functionを求�
 const int TE_SUBCORE  = 4;                          //Tempo Estimationを行うサブコア番号
 const int BT_SUBCORE  = 5;                          //Beat Trackingを行うサブコア番号
 const int FFT_POINT = 1024;                         //FFT点数
+const int DATA_NUM = 512;                           //一度に受信するデータ数
 const int BUF_SIZE = 3;                             //spe_buf,amp_buf,pha_bufのサイズ
 const int HOP_SIZE = 128;                           //TEに一度に送るDFのサンプル数
+const int SOUND_DATA_SIZE = 2;
+const uint16_t BIAS = 345;                          //sound_dataに含まれるバイアス成分
+
+/* グローバル変数 */
+const arm_cfft_instance_f32 *instance(0);           //FFT用のinstance
+float32_t window[FFT_POINT];                        //ハニング窓を格納
 
 /* 関数 */
 int emod(int a, int b);                             //bを法とするユークリッド除法で行う
@@ -29,6 +36,15 @@ void setup() {
   MP.begin(); 
   MP.RecvTimeout(MP_RECV_BLOCKING);
   MPLog("Start DF subcore\n"); 
+
+  instance = &arm_cfft_sR_f32_len1024;
+
+  //窓関数を作成
+  float32_t coe;
+  for(int i = 0;i < FFT_POINT;++i){
+    coe = ((float32_t)i) / ((float32_t)FFT_POINT);
+    window[i] = 0.5 -0.5*arm_cos_f32(2.0*PI*coe);
+  }
 }
 
 void loop() {
@@ -40,19 +56,35 @@ void loop() {
   static int df_bt_pointer = 3;                           //dfの先頭を指す
   static int df_te_pointer = 0;                     //df_teの保存先
   static int df_te_i = 0;                           //df_teのイテレータ
-  static float32_t *r_buf;                          //受信したデータ
   static float32_t df_bt[BUF_SIZE];                 //BT subcoreに送るためのDF
   static float32_t df_te[BUF_SIZE][HOP_SIZE];       //TE subcoreに送るためのDF
   static int8_t msg_id;
+  static float32_t sound_data[SOUND_DATA_SIZE][DATA_NUM];
+  static int sound_data_tail = 1;                   //新しsound_dataの場所
+  static int sound_data_head = 0;
+  static float32_t fft_result[FFT_POINT];
 
-  //FFT_SUBCOREからスペクトルを受信
-  MP.Recv(&msg_id, &r_buf, FFT_SUBCORE);
-  df_bt_pointer = emod(df_bt_pointer + 1, BUF_SIZE);
+  uint16_t *r_buf;                                  //受信したデータを一時保管する
+  MP.Recv(&msg_id, &r_buf, ADC_SUBCORE);
 
-  //受信したデータから値渡し
-  for(int i = 0;i < 2*FFT_POINT;++i){
-    spe_buf[df_bt_pointer][i] = r_buf[i];
+  sound_data_tail = (sound_data_tail+1)%SOUND_DATA_SIZE;
+  sound_data_head = (sound_data_head+1)%SOUND_DATA_SIZE;
+  df_bt_pointer = (df_bt_pointer+1) % BUF_SIZE;
+
+  //受信したデータを移し替えつつ，バイアス成分を取り除く
+  for(int i = 0;i < DATA_NUM;++i){
+    sound_data[sound_data_tail][i] = (float32_t)(r_buf[i] - BIAS);
+    sound_data[sound_data_tail][i] *= 0.1;
   }
+
+  for(int i = 0;i < DATA_NUM;++i){
+    spe_buf[df_bt_pointer][2*i] = sound_data[sound_data_head][i] * window[i];
+  }
+  for(int i = 0;i < DATA_NUM;++i){
+    spe_buf[df_bt_pointer][2*(DATA_NUM+i)] = sound_data[sound_data_tail][i] * window[DATA_NUM+i];
+  }
+
+  arm_cfft_f32(instance, spe_buf[df_bt_pointer], 0, 1);  
 
   //振幅を取り出す
   arm_cmplx_mag_f32(spe_buf[df_bt_pointer], amp_buf[df_bt_pointer], FFT_POINT);
