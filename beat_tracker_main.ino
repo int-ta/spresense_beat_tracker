@@ -43,8 +43,8 @@ void setup() {
   MP.begin(TE_SUBCORE);
 
   //BTを行うサブコアを起動
-  //printf("Start BT subcore\n");
-  //MP.begin(BT_SUBCORE);
+  printf("Start BT subcore\n");
+  MP.begin(BT_SUBCORE);
 
 
   int usedMem, freeMem, largestFreeMem;

@@ -27,6 +27,7 @@ const int TAU_SIZE = 34;
 
 /* グローバル変数 */
 //static float32_t FilterCoe[TAU_SIZE][FLAME_SIZE];
+int arg_max_tau = 52;
 
 /* 関数 */
 int emod(int a, int b);
@@ -36,11 +37,7 @@ float32_t hwr(float32_t x);
 void setup(){
   MP.begin();
   MPLog("start TE subcore\n");
-  int usedMem, freeMem, largestFreeMem;
-  MP.GetMemoryInfo(usedMem, freeMem, largestFreeMem);
-  MPLog("Used:%4d [KB] / Free:%4d [KB] (Largest:%4d [KB])\n",
-        usedMem / 1024, freeMem / 1024, largestFreeMem / 1024);
-  
+  //MP.Send(1, &arg_max_tau, BT_SUBCORE);
   /*
   //float32_t tmp;
   //フィルター係数を初期化
@@ -78,7 +75,6 @@ void loop(){
   static float32_t auto_col[FLAME_SIZE];
   static float32_t output[TAU_END-TAU_BEGIN];
   static float32_t output_max;
-  static int arg_max_tau;
   
   MP.Recv(&msg_id, &r_buf, DF_SUBCORE);
   int write_head = emod(flame_head-HOP_SIZE, FLAME_SIZE);
@@ -126,6 +122,7 @@ void loop(){
     }
   }
   MPLog("%.3lf\n", 60.0/((float32_t)arg_max_tau * 0.0113));
+  MP.Send(1, &arg_max_tau, BT_SUBCORE);
 
   flame_head = (flame_head+HOP_SIZE)%FLAME_SIZE;
   

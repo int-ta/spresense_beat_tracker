@@ -62,7 +62,6 @@ void loop() {
   static float32_t sound_data[SOUND_DATA_SIZE][DATA_NUM];
   static int sound_data_tail = 1;                   //新しsound_dataの場所
   static int sound_data_head = 0;
-  static float32_t fft_result[FFT_POINT];
 
   uint16_t *r_buf;                                  //受信したデータを一時保管する
   MP.Recv(&msg_id, &r_buf, ADC_SUBCORE);
@@ -76,15 +75,21 @@ void loop() {
     sound_data[sound_data_tail][i] = (float32_t)(r_buf[i] - BIAS);
     sound_data[sound_data_tail][i] *= 0.1;
   }
+  //MPLog("%.3lf\n", sound_data[sound_data_tail][0]);
 
   for(int i = 0;i < DATA_NUM;++i){
     spe_buf[df_bt_pointer][2*i] = sound_data[sound_data_head][i] * window[i];
+    spe_buf[df_bt_pointer][2*i+1] = 0.0;
   }
   for(int i = 0;i < DATA_NUM;++i){
     spe_buf[df_bt_pointer][2*(DATA_NUM+i)] = sound_data[sound_data_tail][i] * window[DATA_NUM+i];
+    spe_buf[df_bt_pointer][2*(DATA_NUM+i)+1] = 0.0;
   }
+  //MPLog("%lf\n", sound_data[sound_data_head][0]);
+  //MPLog("%lf\n", sound_data[sound_data_tail][0]);
 
   arm_cfft_f32(instance, spe_buf[df_bt_pointer], 0, 1);  
+  //MPLog("%lf\n", spe_buf[df_bt_pointer][2]);
 
   //振幅を取り出す
   arm_cmplx_mag_f32(spe_buf[df_bt_pointer], amp_buf[df_bt_pointer], FFT_POINT);
@@ -130,8 +135,9 @@ void loop() {
     MP.Send(1, &df_te[df_te_pointer], TE_SUBCORE);
     df_te_pointer = emod(df_te_pointer+1, BUF_SIZE);
   } 
-  
-  MP.Send(1, &df_bt[df_bt_pointer], BT_SUBCORE);
+
+  //MPLog("%lf\n", df_bt[df_bt_pointer]);
+  MP.Send(2, &df_bt[df_bt_pointer], BT_SUBCORE);
 
 }
 
