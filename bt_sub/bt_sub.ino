@@ -15,6 +15,8 @@ const int TE_SUBCORE  = 4;
 const int BT_SUBCORE  = 5;
 const int MAX_V1      = 131;
 const int MAX_V2      = 66;
+const int MIN_INTE = 32;
+const int MAX_INTE = 65;
 
 /* CMSIS用 */
 #define ARM_MATH_CM4
@@ -24,8 +26,8 @@ const int MAX_V2      = 66;
 
 /* グローバル変数 */
 static int beat_period = 65;                //ビート間隔[DF sample]
-static float32_t W_1[131];                  //対数ガウシアン遷移重み
-static float32_t W_2[66];                  //ガウシアン重み
+static float32_t W_1[34][131];                  //対数ガウシアン遷移重み
+static float32_t W_2[34][66];                  //ガウシアン重み
 static const float32_t alpha = 0.9;         //新旧情報へのウェイト
 static const float32_t eta = 5.0;           //W_1のタイトさ
 static float32_t cumu_score[131] = {};
@@ -41,15 +43,19 @@ void setup(){
   *interval_pointer = 65;
 
   //W_1を設定する
-  for(int v1 = 1;v1 < 131;++v1){               //v1=0は未定義なので1<=v1<=230で代入する
-    W_1[v1] = (float32_t)exp(- pow(eta * log10((float)v1/(float)beat_period), 2.0) * 0.5);
-    cumu_score[v1] = 0.0;
+  for(int i = 0;i < 34;++i){
+    for(int v1 = 1;v1 < 131;++v1){               //v1=0は未定義なので1<=v1<=230で代入する
+      W_1[i][v1] = (float32_t)exp(- pow(eta * log10((float)v1/(float)(MIN_INTE+i)), 2.0) * 0.5);
+      cumu_score[v1] = 0.0;
+    }
   }
 
   //W_2を設定する
-  for(int v2 = 1;v2 < 66;++v2){
-    W_2[v2] = exp( - pow((float32_t)v2 - (float32_t)beat_period / 2.0, 2.0) 
-                  / (2.0*pow((float32_t)beat_period/2.0, 2.0)));
+  for(int i = 0;i < 34;++i){
+    for(int v2 = 1;v2 < 66;++v2){
+      W_2[i][v2] = exp( - pow((float32_t)v2 - (float32_t)(i+MIN_INTE) / 2.0, 2.0) 
+                    / (2.0*pow((float32_t)(i+MIN_INTE)/2.0, 2.0)));
+    }
   }
 
   pinMode(LED0, OUTPUT);
@@ -63,7 +69,7 @@ void loop(){
   static int32_t old_beat_pos = 200;
   static int32_t next_beat_pos;
   static int led_state = 0;
-  static int beat_interval = 65;
+  static int beat_interval = 50;
 
   msg_id = 1;
   while(msg_id == 1){
@@ -75,7 +81,7 @@ void loop(){
 
   static float32_t candidate;
   for(int v1 = beat_interval/2;v1 < 2*beat_interval;++v1){
-    candidate = new_inf + alpha*W_1[v1]*cumu_score[emod(cs_head-v1, MAX_V1)];
+    candidate = new_inf + alpha*W_1[beat_interval-MIN_INTE][v1]*cumu_score[emod(cs_head-v1, MAX_V1)];
     if(candidate > cumu_score[cs_head]){
       cumu_score[cs_head] = candidate;
     }
@@ -84,8 +90,8 @@ void loop(){
   int arg_max_v2;
   float32_t weight_cs_max = 0;
   for(int v2 = 1;v2 <= beat_interval; ++v2){
-    if(weight_cs_max < W_2[v2] * cumu_score[emod(old_beat_pos+v2, MAX_V1)]){
-      weight_cs_max = W_2[v2] * cumu_score[emod(old_beat_pos+v2, MAX_V1)];
+    if(weight_cs_max < W_2[beat_interval-MIN_INTE][v2] * cumu_score[emod(old_beat_pos+v2, MAX_V1)]){
+      weight_cs_max = W_2[beat_interval-MIN_INTE][v2] * cumu_score[emod(old_beat_pos+v2, MAX_V1)];
       arg_max_v2 = v2;
     }
   }
@@ -103,9 +109,11 @@ void loop(){
     if(msg_id ==1){
       MPLog("recv\n");
       beat_interval = *interval_pointer;
-  
+      MPLog("%d\n", beat_interval);
+
+      /*
       //W_1を設定する
-      for(int v1 = 1;v1 < 131;++v1){               //v1=0は未定義なので1<=v1<=131で代入する
+      for(int v1 = 1;v1 < 131;++v1){               //v1=0は未定義なので1<=v1<=130で代入する
         W_1[v1] = (float32_t)exp(- pow(eta * log10((float)v1/(float)beat_interval), 2.0) * 0.5);
         cumu_score[v1] = 0.0;
       }
@@ -114,7 +122,7 @@ void loop(){
       for(int v2 = 1;v2 < 66;++v2){
         W_2[v2] = exp( - pow((float32_t)v2 - (float32_t)beat_interval / 2.0, 2.0) 
                       / (2.0*pow((float32_t)beat_interval/2.0, 2.0)));
-      }
+      }*/
     }
   }
 
