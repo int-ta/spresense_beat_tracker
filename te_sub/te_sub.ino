@@ -27,7 +27,6 @@ const int TAU_SIZE = 34;
 
 /* グローバル変数 */
 //static float32_t FilterCoe[TAU_SIZE][FLAME_SIZE];
-int arg_max_tau = 52;
 
 /* 関数 */
 int emod(int a, int b);
@@ -37,32 +36,6 @@ float32_t hwr(float32_t x);
 void setup(){
   MP.begin();
   MPLog("start TE subcore\n");
-  //MP.Send(1, &arg_max_tau, BT_SUBCORE);
-  /*
-  //float32_t tmp;
-  //フィルター係数を初期化
-  for(int l = 0;l < 512;++l){
-    for(int tau_i = 0;tau_i < 34;++tau_i){
-      FilterCoe[tau_i][l] = 0.0;
-    }
-  }
-
-  
-  //フィルター係数を設定
-  for(int tau_i = 0;tau_i < TAU_END-TAU_BEGIN;++tau_i){
-    for(int p = 1;p <= 4;++p){
-      int tau = tau_i + TAU_BEGIN;
-      float32_t tau_f = (float32_t)(tau_i + TAU_BEGIN);
-      float32_t weight = tau_f / (43.0*43.0) * exp(-tau_f*tau_f/(2.0*43.0*43.0));
-      for(int v = 1-p;v <= p-1;++v){
-        FilterCoe[tau_i][tau*p-v] = 1.0/(2.0*(float32_t)p - 1) * weight;
-        //tmp = FilterCoe[tau_i][tau*p-v];
-        //MPLog("%.3lf\n", tmp);
-      }
-    }
-  }
-  */
-  
 }
 
 void loop(){
@@ -75,6 +48,7 @@ void loop(){
   static float32_t auto_col[FLAME_SIZE];
   static float32_t output[TAU_END-TAU_BEGIN];
   static float32_t output_max;
+  static int arg_max_tau;
   
   MP.Recv(&msg_id, &r_buf, DF_SUBCORE);
   int write_head = emod(flame_head-HOP_SIZE, FLAME_SIZE);

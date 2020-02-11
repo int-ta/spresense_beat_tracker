@@ -96,7 +96,7 @@ void loop(){
     }
   }
 
-  next_beat_pos = emod(old_beat_pos + arg_max_v2, MAX_V1);
+  next_beat_pos = emod(old_beat_pos + beat_interval/2 + arg_max_v2, MAX_V1);
   //越した判定(暫定的なもの，あとでしっかり考え直す必要あり)
   if(next_beat_pos == cs_head){
     old_beat_pos = next_beat_pos;
@@ -110,23 +110,10 @@ void loop(){
       MPLog("recv\n");
       beat_interval = *interval_pointer;
       MPLog("%d\n", beat_interval);
-
-      /*
-      //W_1を設定する
-      for(int v1 = 1;v1 < 131;++v1){               //v1=0は未定義なので1<=v1<=130で代入する
-        W_1[v1] = (float32_t)exp(- pow(eta * log10((float)v1/(float)beat_interval), 2.0) * 0.5);
-        cumu_score[v1] = 0.0;
-      }
-  
-      //W_2を設定する
-      for(int v2 = 1;v2 < 66;++v2){
-        W_2[v2] = exp( - pow((float32_t)v2 - (float32_t)beat_interval / 2.0, 2.0) 
-                      / (2.0*pow((float32_t)beat_interval/2.0, 2.0)));
-      }*/
     }
   }
 
-  MPLog("%d %d\n", cs_head, next_beat_pos);
+  //MPLog("%d %d\n", cs_head, next_beat_pos);
   //MP.Send((int8_t)cs_head, &next_beat_pos);
   cs_head = (cs_head + 1) % MAX_V1;
 
